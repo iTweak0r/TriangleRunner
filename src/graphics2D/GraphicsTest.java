@@ -1,6 +1,7 @@
 package graphics2D;
 
 import org.lwjgl.LWJGLException;
+import java.awt.geom.Line2D;
 import org.lwjgl.opengl.*;
 import java.awt.Font;
 import java.util.ArrayList;
@@ -15,15 +16,29 @@ import java.util.Random;
 //drawString(float x, float y, java.lang.String whatchars) 
 
 public class GraphicsTest {
+	
+	
+	public enum CollisionDir {
+		LEFT,
+		TOP,
+		BOTTOM,
+		NONE,
+	}
+	
+	public CollisionDir collided(Rect p, Rect o) {
+		return CollisionDir.NONE;
+	}
+	
+	
 	Font arial = new Font("Arial", Font.PLAIN, 24);
 	ArrayList<Rect> platforms = new ArrayList<Rect>();
 	Random r = new Random();
 	float camera = 0.6F;
-	public int waitForButton(Controller pad) {
+	public int waitForButton(Controller pad, String p) {
 		TrueTypeFont text = new TrueTypeFont(arial, true);
 		while (true) {
 			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-			text.drawString(300, 300, "Choose your jump button", Color.green);
+			text.drawString(300, 300, p , Color.green);
 			pad.poll();
 			Display.update();
 			for ( int i = 0; i < pad.getButtonCount(); i++ ) {
@@ -34,7 +49,22 @@ public class GraphicsTest {
 		}
 		
 	}
-	public void gameOver() {
+	
+	public void texterWaiter(String p) {
+		TrueTypeFont text = new TrueTypeFont(arial, true);
+		while (true) {
+			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+			text.drawString(100, 300, p , Color.green);
+			Display.update();
+			if (Keyboard.isKeyDown(Keyboard.KEY_SPACE)) {
+				return;
+			}
+		}
+		
+	}
+	public void gameOver(float score) {
+		GL11.glEnable(GL11.GL_BLEND);
+		texterWaiter("GAME OVER! Score: " + (int)score + " Points. (Press Space)");
 		System.exit(0);
 	}
 	public void generatePlatforms(ArrayList<Rect> plats) {
@@ -49,10 +79,14 @@ public class GraphicsTest {
 				height = 9;
 			}
 			addPlatform(height);
+			addPlatform(height);
 			lastPlat = plats.get(plats.size()-1);
 		}
 	}
 	public void start() {
+		float s = 0.0F;
+		float score = 0;
+		Rect oldPlayer = new Rect(200,400,20,20);
 		/*platforms.add(1);
 		platforms.add(1);
 		platforms.add(1);
@@ -71,10 +105,15 @@ public class GraphicsTest {
 		addPlatform(1);
 		addPlatform(1);
 		addPlatform(1);
+		addPlatform(1);
+		addPlatform(1);
+		addPlatform(1);
+		addPlatform(1);
+		addPlatform(4);
 		generatePlatforms(platforms);
 		//int x = 100;
 		//int y = 500;
-		Rect Player = new Rect(100,400,20,20);
+		Rect Player = new Rect(200,400,20,20);
 		//Rect byplay = new Rect(x+10,y+10,20,20);
 		//System.out.println(byplay.touching(Player));
 		float yvel = 0;
@@ -87,38 +126,60 @@ public class GraphicsTest {
 			gamepad = Controllers.getController(0);
 			initGL(800,600);
 		} catch (LWJGLException e) {
-			e.printStackTrace();
-			System.exit(0);
+			gamepad = null;
+			initGL(800,600);
 		}
 		
-		int jumpButton = waitForButton(gamepad);
+		int jumpButton1 = waitForButton(gamepad, "Choose your jump button,\nPlayer 1");
+		int jumpButton2 = waitForButton(gamepad, "Choose your jump button,\nPlayer 2");
 		GL11.glDisable(GL11.GL_BLEND);
 		
 		while (!Display.isCloseRequested()) {
 			//Updating//
 			boolean keyDown = Keyboard.isKeyDown(Keyboard.KEY_SPACE);
 			Player.y += yvel;
-			Rect touchedRect = null;
+			//Rect touchedRect = null;
+			boolean canJump = false;
 			for (Rect r : platforms) {
-				if (r.touching(Player)) {
-					touchedRect = r;
-					break;
-				}
+			  //if (r.touching(Player)) {
+			    //touchedRect = r;
+			  //}
+				CollisionDir c = (collided(Player, r));
+				if (c == CollisionDir.TOP) {
+					Player.y = r.y-Player.height;
+					yvel = 0;
+					canJump = true;
+				} else if (c == CollisionDir.BOTTOM) {
+					System.out.println("Hit a Bottom");
+					yvel = 3;
+					Player.y = r.bottom();
+				} else if (c == CollisionDir.LEFT) {
+					Player.x = r.x-Player.width;
+				}	
 			}
-			if (touchedRect != null) {
+			if (canJump) {//touchedRect != null) {
+				/*
 				if (comingFromTop(Player, touchedRect)) {
 					Player.y = touchedRect.y-Player.height;
 					//System.out.println("Touching");
 					yvel = 0;
-					if (keyDown || gamepad.isButtonPressed(jumpButton)) {
-						yvel = -10;
-					}
+				} else if (hitABottom(Player, touchedRect)){
+					System.out.println("Hit a Bottom");
+					yvel = 3;
+					Player.y = (touchedRect.bottom()+Player.height) + 1;
 				} else {
 					Player.x -= camera;
 				}
+				*/
+				if (keyDown || gamepad.isButtonPressed(jumpButton1)) {
+					yvel = -7;
+				}
 			} else {
-				yvel += 0.4F;
+				yvel += 0.2F;
 			}
+			//if (keyDown || gamepad.isButtonPressed(jumpButton1)) {
+			//	yvel = -10;
+			//}
 			if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) {
 				Player.x += 2;
 			}
@@ -127,22 +188,26 @@ public class GraphicsTest {
 			}
 			movePlatforms(platforms);
 			if (Player.y > 600) {
-				gameOver();
+				gameOver(score);
 			}
 			if (Player.x < 0) {
-				gameOver();
+				gameOver(score);
 			}
-			camera += 0.003;
+			camera += 0.0003;
+			score += 0.01;
 			generatePlatforms(platforms);
+			s+=0.1;
+			oldPlayer = Player;
 			//Drawing//
-			Color.cyan.bind();
+			Color.red.bind();
 			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
 			drawCharacter(Player.x,Player.y);
+			//text.drawString(300, 300, "Score: " + (int)s , Color.green);
 			Color.white.bind();
 			drawPlatforms(platforms);
 			//drawSquare(400,300,50);
 			Display.update();
-			Display.sync(60);
+			Display.sync(120);
 		}
 		
 		Display.destroy();
@@ -215,6 +280,16 @@ public class GraphicsTest {
 		float dist1 = Math.abs(p.bottom() - o.y);
 		float dist2 = Math.abs(p.y - o.bottom());
 		if (dist1 < dist2) {
+			return true;
+		}
+		return false;
+	}
+	public boolean hitABottom(Rect p, Rect o) {
+		float dist1 = Math.abs(p.y - o.bottom());
+		float dist2 = Math.abs(p.bottom() - o.y);
+		float x1    = p.x;
+		float x2    = o.x;
+		if (dist1 > dist2 && x1+(p.width/2) > x2) {
 			return true;
 		}
 		return false;
