@@ -3,7 +3,6 @@ package graphics2D;
 import org.lwjgl.LWJGLException;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
-
 import org.lwjgl.opengl.*;
 import java.awt.Font;
 import java.util.ArrayList;
@@ -15,10 +14,8 @@ import org.newdawn.slick.Color;
 import org.newdawn.slick.TrueTypeFont;
 import java.util.Random;
 
-//drawString(float x, float y, java.lang.String whatchars) 
 
 public class GraphicsTest {
-	
 	
 	public enum CollisionDir {
 		LEFT,
@@ -43,11 +40,11 @@ public class GraphicsTest {
 		return CollisionDir.NONE;
 	}
 	
-	
 	Font arial = new Font("Arial", Font.PLAIN, 24);
 	ArrayList<Rect> platforms = new ArrayList<Rect>();
 	Random r = new Random();
 	float camera = 0.6F;
+	
 	public int waitForButton(Controller pad, String p) {
 		TrueTypeFont text = new TrueTypeFont(arial, true);
 		while (true) {
@@ -76,11 +73,13 @@ public class GraphicsTest {
 		}
 		
 	}
+	
 	public void gameOver(float score) {
 		GL11.glEnable(GL11.GL_BLEND);
 		texterWaiter("GAME OVER! Score: " + (int)score + " Points. (Press Space)");
 		System.exit(0);
 	}
+	
 	public void generatePlatforms(ArrayList<Rect> plats) {
 		Rect lastPlat = plats.get(plats.size()-1);
 		while (lastPlat.x < 800) {
@@ -97,25 +96,10 @@ public class GraphicsTest {
 			lastPlat = plats.get(plats.size()-1);
 		}
 	}
+	
 	public void start() {
-		float s = 0.0F;
 		float score = 0;
-		Rect oldPlayer = new Rect(200,400,20,20);
-		/*platforms.add(1);
-		platforms.add(1);
-		platforms.add(1);
-		platforms.add(1);
-		platforms.add(2);
-		platforms.add(3);
-		platforms.add(2);
-		platforms.add(1);
-		platforms.add(3);
-		addPlatform(2);
-		addPlatform(3);
-		addPlatform(2);
-		addPlatform(1);
-		addPlatform(3);
-		*/
+		
 		addPlatform(1);
 		addPlatform(1);
 		addPlatform(1);
@@ -125,12 +109,10 @@ public class GraphicsTest {
 		addPlatform(1);
 		addPlatform(2);
 		generatePlatforms(platforms);
-		//int x = 100;
-		//int y = 500;
-		Rect Player = new Rect(200,400,20,20);
-		//Rect byplay = new Rect(x+10,y+10,20,20);
-		//System.out.println(byplay.touching(Player));
-		float yvel = 0;
+		
+		Rect oldPlayer = new Rect(200,400,20,20);
+		Rect Player    = new Rect(200,400,20,20);
+		float yvel     = 0;
 		
 		try {
 			Display.setDisplayMode(new DisplayMode(800,600));
@@ -143,6 +125,8 @@ public class GraphicsTest {
 			System.exit(0);
 		}
 		
+		TrueTypeFont text = new TrueTypeFont(arial, true);
+		
 		Controller gamepad = null;
 		if (Controllers.getControllerCount() > 0) {
 			gamepad = Controllers.getController(0);
@@ -152,87 +136,87 @@ public class GraphicsTest {
 		int jumpButton2 = 0;
 		if (gamepad != null) {
 			jumpButton1 = waitForButton(gamepad, "Choose your jump button,\nPlayer 1");
-			jumpButton2 = waitForButton(gamepad, "Choose your jump button,\nPlayer 2");
+			//jumpButton2 = waitForButton(gamepad, "Choose your jump button,\nPlayer 2");
 		}
+		
 		GL11.glDisable(GL11.GL_BLEND);
 		
 		while (!Display.isCloseRequested()) {
 			//Updating//
+			
 			boolean keyDown = Keyboard.isKeyDown(Keyboard.KEY_SPACE);
 			Player.y += yvel;
-			//Rect touchedRect = null;
 			boolean canJump = false;
 			float nyvel = yvel;
+			
 			for (Rect r : platforms) {
-			  //if (r.touching(Player)) {
-			    //touchedRect = r;
-			  //}
 				CollisionDir c = (collided(Player, oldPlayer, r));
 				if (c == CollisionDir.TOP && yvel > 0) {
 					Player.y = r.y-Player.height;
 			 		nyvel = 0;
 					canJump = true;
 				} else if (c == CollisionDir.BOTTOM && yvel < 0) {
-					//System.out.println("Hit a Bottom");
 					nyvel = 3;
 					Player.y = r.bottom();
 				} if (c == CollisionDir.LEFT) {
-					//System.out.println("L");
 					Player.x = r.x-Player.width;
 				}	
 			}
+			
 			yvel = nyvel;
-			if (canJump) {//touchedRect != null) {
-				/*
-				if (comingFromTop(Player, touchedRect)) {
-					Player.y = touchedRect.y-Player.height;
-					//System.out.println("Touching");
-					yvel = 0;
-				} else if (hitABottom(Player, touchedRect)){
-					System.out.println("Hit a Bottom");
-					yvel = 3;
-					Player.y = (touchedRect.bottom()+Player.height) + 1;
-				} else {
-					Player.x -= camera;
-				}
-				*/
-				//System.out.println(keyDown);
+			
+			if (canJump) {
 				if (keyDown || (gamepad != null && gamepad.isButtonPressed(jumpButton1))) {
 					yvel = -7;
 				}
 			} else {
 				yvel += 0.2F;
 			}
-			//if (keyDown || gamepad.isButtonPressed(jumpButton1)) {
-			//	yvel = -10;
-			//}
+
 			if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) {
 				Player.x += 2;
 			}
+			
 			if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) {
 				Player.x -= 2;
 			}
+			
 			movePlatforms(platforms);
+			
 			if (Player.y > 600) {
 				gameOver(score);
 			}
+			
 			if (Player.x < 0) {
 				gameOver(score);
 			}
+			
+			//Scroll and update score//
+			
 			camera += 0.0003;
 			score += 0.01;
+			
+			//Final updating//
+			
 			generatePlatforms(platforms);
-			s+=0.1;
 			Player.copyTo(oldPlayer);
 			oldPlayer.x -= camera;
+			
 			//Drawing//
+			
 			Color.red.bind();
 			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+			
 			drawCharacter(Player.x,Player.y);
-			//text.drawString(300, 300, "Score: " + (int)s , Color.green);
+			
+			//Score//
+		    GL11.glEnable(GL11.GL_BLEND);
+			text.drawString(Display.getWidth()-200, 50, "Score: " + (int)score , Color.green);
+			GL11.glDisable(GL11.GL_BLEND);
+			
 			Color.white.bind();
 			drawPlatforms(platforms);
-			//drawSquare(400,300,50);
+			
 			Display.update();
 			Display.sync(120);
 		}
@@ -244,6 +228,7 @@ public class GraphicsTest {
 		GraphicsTest displayExample = new GraphicsTest();
 		displayExample.start();
 	}
+	
 	public void initGL(int w, int h) {
 		GL11.glViewport(0, 0, w, h);
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
@@ -258,14 +243,12 @@ public class GraphicsTest {
 	    GL11.glEnable(GL11.GL_BLEND);
 	    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 	}
+	
 	public void drawCharacter(float trix, float triy) {
 		GL11.glBegin(GL11.GL_TRIANGLES);  
-			//GL11.glVertex3f( 300f, 400f, 0.0f); 
-			//GL11.glVertex3f(400f,300f, 0.0f);  
-			//GL11.glVertex3f( 300f,300f, 0.0f);
-			GL11.glVertex2f(trix, triy);
-			GL11.glVertex2f(trix-20, triy+20);
-			GL11.glVertex2f(trix+20, triy+20);
+		GL11.glVertex2f(trix, triy);
+		GL11.glVertex2f(trix-20, triy+20);
+		GL11.glVertex2f(trix+20, triy+20);
 		GL11.glEnd();
 	}
 	
@@ -311,6 +294,7 @@ public class GraphicsTest {
 		}
 		return false;
 	}
+	
 	public boolean hitABottom(Rect p, Rect o) {
 		float dist1 = Math.abs(p.y - o.bottom());
 		float dist2 = Math.abs(p.bottom() - o.y);
