@@ -2,6 +2,8 @@ package graphics2D;
 
 import org.lwjgl.LWJGLException;
 import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
+
 import org.lwjgl.opengl.*;
 import java.awt.Font;
 import java.util.ArrayList;
@@ -25,7 +27,19 @@ public class GraphicsTest {
 		NONE,
 	}
 	
-	public CollisionDir collided(Rect p, Rect o) {
+	public CollisionDir collided(Rect p, Rect op, Rect o) {
+		Point2D[] pt    = p.getTrianglePoints();
+		Point2D[] opt   = op.getTrianglePoints();
+		Line2D [] lines = new Line2D[] {new Line2D.Float(opt[2], pt[2]), new Line2D.Float(opt[0], pt[0]), new Line2D.Float(opt[1], pt[1])};
+		for (Line2D l : lines) {
+			if (l.intersectsLine(o.topLine())) {
+				return CollisionDir.TOP;
+			} else if (l.intersectsLine(o.leftLine())) {
+				return CollisionDir.LEFT;
+			} else if (l.intersectsLine(o.bottomLine())) {
+				return CollisionDir.BOTTOM; 
+			}
+		}
 		return CollisionDir.NONE;
 	}
 	
@@ -109,7 +123,7 @@ public class GraphicsTest {
 		addPlatform(1);
 		addPlatform(1);
 		addPlatform(1);
-		addPlatform(4);
+		addPlatform(2);
 		generatePlatforms(platforms);
 		//int x = 100;
 		//int y = 500;
@@ -117,21 +131,29 @@ public class GraphicsTest {
 		//Rect byplay = new Rect(x+10,y+10,20,20);
 		//System.out.println(byplay.touching(Player));
 		float yvel = 0;
-		Controller gamepad = null;
+		
 		try {
 			Display.setDisplayMode(new DisplayMode(800,600));
 			Display.setTitle("Triangle Jumper");
 			Display.create();
 			Controllers.create();
-			gamepad = Controllers.getController(0);
 			initGL(800,600);
 		} catch (LWJGLException e) {
-			gamepad = null;
-			initGL(800,600);
+			System.out.println("Sorry, your computer sucks!");
+			System.exit(0);
 		}
 		
-		int jumpButton1 = waitForButton(gamepad, "Choose your jump button,\nPlayer 1");
-		int jumpButton2 = waitForButton(gamepad, "Choose your jump button,\nPlayer 2");
+		Controller gamepad = null;
+		if (Controllers.getControllerCount() > 0) {
+			gamepad = Controllers.getController(0);
+		}
+		
+		int jumpButton1 = 0;
+		int jumpButton2 = 0;
+		if (gamepad != null) {
+			jumpButton1 = waitForButton(gamepad, "Choose your jump button,\nPlayer 1");
+			jumpButton2 = waitForButton(gamepad, "Choose your jump button,\nPlayer 2");
+		}
 		GL11.glDisable(GL11.GL_BLEND);
 		
 		while (!Display.isCloseRequested()) {
@@ -140,23 +162,26 @@ public class GraphicsTest {
 			Player.y += yvel;
 			//Rect touchedRect = null;
 			boolean canJump = false;
+			float nyvel = yvel;
 			for (Rect r : platforms) {
 			  //if (r.touching(Player)) {
 			    //touchedRect = r;
 			  //}
-				CollisionDir c = (collided(Player, r));
-				if (c == CollisionDir.TOP) {
+				CollisionDir c = (collided(Player, oldPlayer, r));
+				if (c == CollisionDir.TOP && yvel > 0) {
 					Player.y = r.y-Player.height;
-					yvel = 0;
+			 		nyvel = 0;
 					canJump = true;
-				} else if (c == CollisionDir.BOTTOM) {
-					System.out.println("Hit a Bottom");
-					yvel = 3;
+				} else if (c == CollisionDir.BOTTOM && yvel < 0) {
+					//System.out.println("Hit a Bottom");
+					nyvel = 3;
 					Player.y = r.bottom();
-				} else if (c == CollisionDir.LEFT) {
+				} if (c == CollisionDir.LEFT) {
+					//System.out.println("L");
 					Player.x = r.x-Player.width;
 				}	
 			}
+			yvel = nyvel;
 			if (canJump) {//touchedRect != null) {
 				/*
 				if (comingFromTop(Player, touchedRect)) {
@@ -171,7 +196,8 @@ public class GraphicsTest {
 					Player.x -= camera;
 				}
 				*/
-				if (keyDown || gamepad.isButtonPressed(jumpButton1)) {
+				//System.out.println(keyDown);
+				if (keyDown || (gamepad != null && gamepad.isButtonPressed(jumpButton1))) {
 					yvel = -7;
 				}
 			} else {
@@ -197,7 +223,8 @@ public class GraphicsTest {
 			score += 0.01;
 			generatePlatforms(platforms);
 			s+=0.1;
-			oldPlayer = Player;
+			Player.copyTo(oldPlayer);
+			oldPlayer.x -= camera;
 			//Drawing//
 			Color.red.bind();
 			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
