@@ -5,6 +5,7 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import org.lwjgl.opengl.*;
 import java.awt.Font;
+import java.io.IOException;
 import java.util.ArrayList;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -12,6 +13,10 @@ import org.lwjgl.input.Controller;
 import org.lwjgl.input.Controllers;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.TrueTypeFont;
+import org.newdawn.slick.opengl.Texture;
+import org.newdawn.slick.opengl.TextureLoader;
+import org.newdawn.slick.util.ResourceLoader;
+
 import java.util.Random;
 
 
@@ -45,10 +50,15 @@ public class GraphicsTest {
 	Random r = new Random();
 	float camera = 0.6F;
 	
-	public int waitForButton(Controller pad, String p) {
+	public int waitForButton(Controller pad, String p, Texture t) {
 		TrueTypeFont text = new TrueTypeFont(arial, true);
 		while (true) {
 			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+			if (t != null) {
+				Color.white.bind();
+				t.bind();
+				drawSquare(200, 200, 300);
+			}
 			text.drawString(300, 300, p , Color.green);
 			pad.poll();
 			Display.update();
@@ -61,22 +71,32 @@ public class GraphicsTest {
 		
 	}
 	
-	public void texterWaiter(String p) {
+	public void texterWaiter(String p, Controller pad, Texture t) {
 		TrueTypeFont text = new TrueTypeFont(arial, true);
-		while (true) {
-			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-			text.drawString(100, 300, p , Color.green);
-			Display.update();
-			if (Keyboard.isKeyDown(Keyboard.KEY_SPACE)) {
-				return;
+		if (pad == null) {
+			while (true) {
+				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+				if (t != null) {
+					Color.white.bind();
+					t.bind();
+					drawSquare(200, 200, 300);
+				}
+				text.drawString(100, 300, p , Color.green);
+				Display.update();
+				if (Keyboard.isKeyDown(Keyboard.KEY_SPACE)) {
+					return;
+				}
 			}
+		} else {
+			waitForButton(pad, p, t);
 		}
 		
 	}
 	
-	public void gameOver(float score) {
+	public void gameOver(float score, Controller c) {
 		GL11.glEnable(GL11.GL_BLEND);
-		texterWaiter("GAME OVER! Score: " + (int)score + " Points. (Press Space)");
+		
+		texterWaiter("GAME OVER! Score: " + (int)score + " Points.", c, null);
 		System.exit(0);
 	}
 	
@@ -126,6 +146,7 @@ public class GraphicsTest {
 		}
 		
 		TrueTypeFont text = new TrueTypeFont(arial, true);
+	
 		
 		Controller gamepad = null;
 		if (Controllers.getControllerCount() > 0) {
@@ -135,9 +156,21 @@ public class GraphicsTest {
 		int jumpButton1 = 0;
 		int jumpButton2 = 0;
 		if (gamepad != null) {
-			jumpButton1 = waitForButton(gamepad, "Choose your jump button,\nPlayer 1");
-			//jumpButton2 = waitForButton(gamepad, "Choose your jump button,\nPlayer 2");
+			jumpButton1 = waitForButton(gamepad, "Choose your jump button,\nPlayer 1", null);
+			// jumpButton2 = waitForButton(gamepad, "Choose your jump button,\nPlayer 2");
 		}
+		
+		Texture titleImage = null;
+		try {
+			titleImage = TextureLoader.getTexture("PNG", ResourceLoader.getResourceAsStream("TRlogo.png"));
+		} catch (IOException e) {
+			System.exit(0);
+		}
+		
+		
+		GL11.glEnable(GL11.GL_TEXTURE_2D);
+		
+		texterWaiter("        Press button to start", gamepad, titleImage);
 		
 		GL11.glDisable(GL11.GL_BLEND);
 		
@@ -173,22 +206,22 @@ public class GraphicsTest {
 				yvel += 0.2F;
 			}
 
-			if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) {
+			/*if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) {
 				Player.x += 2;
 			}
 			
 			if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) {
 				Player.x -= 2;
-			}
+			}*/
 			
 			movePlatforms(platforms);
 			
 			if (Player.y > 600) {
-				gameOver(score);
+				gameOver(score, gamepad);
 			}
 			
 			if (Player.x < 0) {
-				gameOver(score);
+				gameOver(score, gamepad);
 			}
 			
 			//Scroll and update score//
@@ -253,10 +286,14 @@ public class GraphicsTest {
 	}
 	
 	public void drawSquare(float x, float y, float s) {
-		GL11.glBegin(GL11.GL_QUADS);      
-        GL11.glVertex3f(x, y, 0.0f); 
+		GL11.glBegin(GL11.GL_QUADS);
+		GL11.glTexCoord2f(0,0);
+        GL11.glVertex3f(x, y, 0.0f);
+        GL11.glTexCoord2f(0,1);
         GL11.glVertex3f(x, y + s, 0.0f);
-        GL11.glVertex3f(x + s, y + s, 0.0f); 
+        GL11.glTexCoord2f(1,1);
+        GL11.glVertex3f(x + s, y + s, 0.0f);
+        GL11.glTexCoord2f(1,0);
         GL11.glVertex3f(x + s, y, 0.0f);
         GL11.glEnd();
 	}
